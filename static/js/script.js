@@ -1,56 +1,48 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const youtubeUrlInput = document.getElementById('youtube-url');
-    const processBtnInput = document.getElementById('process-btn');
+document.addEventListener('DOMContentLoaded', function() {
+    const processBtn = document.getElementById('process-btn');
+    const videoUrlInput = document.getElementById('video-url');
     const resultDiv = document.getElementById('result');
-    const linkedinPostTextarea = document.getElementById('linkedin-post');
-    const copyBtn = document.getElementById('copy-btn');
+    const wordList = document.getElementById('word-list');
     const loadingDiv = document.getElementById('loading');
+
+    processBtn.addEventListener('click', function() {
+        const videoUrl = videoUrlInput.value.trim();
+        if (videoUrl) {
+            resultDiv.classList.add('hidden');
+            loadingDiv.classList.remove('hidden');
+
+            fetch('/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `video_url=${encodeURIComponent(videoUrl)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.classList.add('hidden');
+                if (data.success) {
+                    wordList.innerHTML = '';
+                    data.result.forEach(([word, count]) => {
+                        const li = document.createElement('li');
+                        li.textContent = `${word}: ${count}`;
+                        wordList.appendChild(li);
+                    });
+                    resultDiv.classList.remove('hidden');
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                loadingDiv.classList.add('hidden');
+                alert('Virhe käsittelyssä: ' + error);
+            });
+        } else {
+            alert('Syötä validi YouTube URL.');
+        }
+    });
 
     particlesJS.load('particles-js', '/static/particles.json', function() {
         console.log('callback - particles.js config loaded');
-    });
-
-    processBtnInput.addEventListener('click', async () => {
-        const youtubeUrl = youtubeUrlInput.value.trim();
-        if (!youtubeUrl) {
-            alert('Syötä kelvollinen YouTube-URL');
-            return;
-        }
-
-        resultDiv.classList.add('hidden');
-        loadingDiv.classList.remove('hidden');
-
-        try {
-            const response = await fetch('/process', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url: youtubeUrl }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                linkedinPostTextarea.value = data.linkedin_post;
-                resultDiv.classList.remove('hidden');
-            } else {
-                alert(`Virhe: ${data.error}`);
-            }
-        } catch (error) {
-            alert('Tapahtui virhe käsiteltäessä pyyntöä');
-        } finally {
-            loadingDiv.classList.add('hidden');
-        }
-    });
-
-    copyBtn.addEventListener('click', () => {
-        linkedinPostTextarea.select();
-        document.execCommand('copy');
-        // Muutetaan kopiointi-ilmoitus
-        copyBtn.textContent = 'Kopioitu';
-        setTimeout(() => {
-            copyBtn.textContent = 'Kopioi';
-        }, 2000); // Palautetaan alkuperäinen teksti 2 sekunnin kuluttua
     });
 });
